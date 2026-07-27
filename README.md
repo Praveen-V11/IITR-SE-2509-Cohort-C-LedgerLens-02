@@ -13,6 +13,8 @@ Built for IITR-SE-2509, Cohort C, Capstone C·02 (Document Intelligence).
 
 ## Architecture, in one paragraph
 
+![LedgerLens architecture diagram](docs/architecture.png)
+
 An uploaded image passes through the OpenAI Moderation API before anything
 else happens. If it clears that gate, it's resized for cost control and
 sent to GPT-4o with `response_format` bound to a Pydantic schema, so the
