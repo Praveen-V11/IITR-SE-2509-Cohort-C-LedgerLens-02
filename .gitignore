@@ -1,0 +1,24 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+
+# local data
+*.db
+uploads/
+!uploads/.gitkeep
+
+# env
+.env
+
+# editor/OS cruft
+.DS_Store
+.vscode/
+.idea/
+
+# test artifacts
+.pytest_cache/
+.ruff_cache/
+htmlcov/
+.coverage
