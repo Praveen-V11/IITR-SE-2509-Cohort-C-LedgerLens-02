@@ -1,0 +1,79 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "title": "LedgerLens Overview",
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "10s",
+  "time": { "from": "now-1h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Moderation latency (p95)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(ledgerlens_moderation_latency_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p95 moderation latency"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Extraction latency (p95)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(ledgerlens_extraction_latency_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p95 extraction latency"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Cumulative token cost (USD)",
+      "type": "stat",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 8 },
+      "targets": [
+        { "expr": "ledgerlens_token_cost_usd_total", "legendFormat": "total cost" }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Auto-approval rate",
+      "type": "stat",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 8 },
+      "targets": [
+        {
+          "expr": "ledgerlens_documents_auto_approved_total / clamp_min(ledgerlens_documents_ingested_total, 1)",
+          "legendFormat": "auto-approval rate"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "percentunit" }, "overrides": [] }
+    },
+    {
+      "id": 5,
+      "title": "Documents ingested / min",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 8 },
+      "targets": [
+        {
+          "expr": "sum(rate(ledgerlens_documents_ingested_total[1m])) * 60",
+          "legendFormat": "docs/min"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Review queue size",
+      "type": "stat",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 16 },
+      "targets": [
+        { "expr": "ledgerlens_review_queue_size", "legendFormat": "pending review" }
+      ]
+    }
+  ]
+}

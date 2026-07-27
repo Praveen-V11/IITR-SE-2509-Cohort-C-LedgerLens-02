@@ -1,0 +1,84 @@
+name: CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Lint
+        run: ruff check app tests streamlit_app.py
+
+      - name: Run schema-contract and pipeline tests
+        env:
+          OPENAI_API_KEY: "ci-placeholder-not-a-real-key"
+        run: pytest -q
+
+  docker-build:
+    needs: lint-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t ledgerlens:ci .
+
+  deploy:
+    # Only runs on main, and only if GCP deploy secrets are configured -
+    # keeps the pipeline green for anyone forking/running this without a
+    # Cloud Run project, per the brief's "or run-it-locally" fallback.
+    needs: docker-build
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check deploy secrets are present
+        id: check
+        run: |
+          if [ -n "${{ secrets.GCP_PROJECT_ID }}" ] && [ -n "${{ secrets.GCP_SA_KEY }}" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Authenticate to GCP
+        if: steps.check.outputs.configured == 'true'
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        if: steps.check.outputs.configured == 'true'
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Build and deploy to Cloud Run
+        if: steps.check.outputs.configured == 'true'
+        run: |
+          gcloud config set project ${{ secrets.GCP_PROJECT_ID }}
+          gcloud builds submit --tag gcr.io/${{ secrets.GCP_PROJECT_ID }}/ledgerlens
+          gcloud run deploy ledgerlens \
+            --image gcr.io/${{ secrets.GCP_PROJECT_ID }}/ledgerlens \
+            --platform managed \
+            --region us-central1 \
+            --allow-unauthenticated \
+            --set-env-vars OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+
+      - name: Skip notice
+        if: steps.check.outputs.configured == 'false'
+        run: echo "GCP secrets not configured - skipping deploy step (local docker-compose run is the documented fallback)."
